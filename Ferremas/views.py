@@ -1,5 +1,6 @@
 from django.shortcuts import render
-import pyrebase 
+from django.views.generic import TemplateView
+import pyrebase
 
 config={
     "apiKey": "AIzaSyD8ccAxOcOftM2KVcH28Di7rvpYW8Mp-nM",
@@ -10,3 +11,21 @@ config={
     "messagingSenderId": "837938741466",
     "appId": "1:837938741466:web:2e63e016318b97ec2525e3",
 }
+
+# Function-based view approach
+def home(request):
+    context = {
+        'title': 'Ferremas - Tienda de Ferretería',
+        'featured_products': []  # You can populate this from Firebase
+    }
+    return render(request, 'home.html', context)
+
+# Class-based view approach
+class HomeView(TemplateView):
+    template_name = 'home.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Ferremas - Tienda de Ferretería'
+        context['featured_products'] = []  # You can populate this from Firebase
+        return context
