@@ -993,3 +993,16 @@ def orders(request):
         'cart': cart,
     }
     return render(request, 'shop/orders.html', context)
+
+def set_currency(request):
+    """
+    Vista para cambiar la divisa actual
+    """
+    currency = request.GET.get('currency', 'CLP')
+    next_url = request.GET.get('next', '/')
+    
+    # Guardar la divisa en la sesión
+    request.session['currency'] = currency
+    
+    # Redirigir a la página anterior
+    return redirect(next_url)

@@ -1,5 +1,6 @@
 {% extends "shop/base.html" %}
 {% load static %}
+{% load currency_tags %}
 
 {% block title %}Ferremas - Inicio{% endblock %}
 
@@ -107,7 +108,7 @@
                             <h5 class="card-title">{{ product.name }}</h5>
                             <p class="card-text text-muted small">{{ product.description|truncatechars:60 }}</p>
                             <div class="mt-auto">
-                                <p class="price mb-2">${{ product.price }}</p>
+                                <p class="price mb-2">{{ product.price|convert_currency:request.session.currency }}</p>
                                 <div class="d-flex justify-content-between">
                                     <a href="{% url 'product_detail' product.id %}" class="btn btn-sm btn-outline-primary">Ver detalles</a>
                                     <a href="{% url 'add_to_cart' product.id %}" class="btn btn-sm btn-primary">

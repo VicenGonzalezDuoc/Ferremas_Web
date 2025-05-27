@@ -30,6 +30,8 @@ urlpatterns = [
     
     # Search URL
     path('search/', views.search_products, name='search'),
+    # Añadir esta URL a las URLs existentes
+    path('set-currency/', views.set_currency, name='set_currency'),
 ]
 
 

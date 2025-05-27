@@ -26,6 +26,18 @@
                 </li>
             </ul>
             <ul class="navbar-nav">
+                <!-- Selector de divisa -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="currencyDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-currency-exchange"></i> {{ request.session.currency|default:"CLP" }}
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="currencyDropdown">
+                        <li><a class="dropdown-item {% if request.session.currency == 'CLP' or not request.session.currency %}active{% endif %}" href="{% url 'set_currency' %}?currency=CLP&next={{ request.path|urlencode }}">CLP</a></li>
+                        <li><a class="dropdown-item {% if request.session.currency == 'USD' %}active{% endif %}" href="{% url 'set_currency' %}?currency=USD&next={{ request.path|urlencode }}">USD</a></li>
+                        <li><a class="dropdown-item {% if request.session.currency == 'EUR' %}active{% endif %}" href="{% url 'set_currency' %}?currency=EUR&next={{ request.path|urlencode }}">EUR</a></li>
+                    </ul>
+                </li>
+                
                 <li class="nav-item">
                     <a class="nav-link position-relative" href="{% url 'cart' %}">
                         <i class="bi bi-cart"></i> Carrito
