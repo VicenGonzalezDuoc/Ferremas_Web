@@ -23,14 +23,18 @@ python -m venv venv
 ./venv/Scripts/activate  # En Windows: venv\Scripts\activate
 ```
 
-3. Instalar dependencias
+3. Instalar dependencias principales
 ```bash
 pip install -r requirements.txt
 ```
 
-4. Verificar que todos los paquetes requeridos estén instalados
+4. Dependencias necesarias para levantar el proyecto
 ```bash
-pip install django-crispy-forms crispy-bootstrap5 djangorestframework drf-yasg django-filter Pillow
+pip install django==4.2.21
+pip install pyrebase4
+pip install django-crispy-forms crispy-bootstrap5
+pip install djangorestframework drf-yasg django-filter
+pip install Pillow
 ```
 
 5. Aplicar migraciones
@@ -41,4 +45,5 @@ python manage.py migrate
 6. Iniciar el servidor
 ```bash
 python manage.py runserver
-yes
+```
+
