@@ -1,0 +1,11 @@
+<div class="card mb-4">
+    <div class="card-body">
+        <h5 class="card-title">Detalles del producto</h5>
+        <ul class="list-group list-group-flush">
+            <li class="list-group-item"><strong>Código:</strong> {{ product.code }}</li>
+            <li class="list-group-item"><strong>Categoría:</strong> {{ product.subcategory.category.name }}</li>
+            <li class="list-group-item"><strong>Subcategoría:</strong> {{ product.subcategory.name }}</li>
+            <li class="list-group-item"><strong>Stock disponible:</strong> {{ product.stock }} unidades</li>
+        </ul>
+    </div>
+</div>

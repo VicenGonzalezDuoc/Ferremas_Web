@@ -1,0 +1,75 @@
+{% extends 'shop/base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'home' %}">Inicio</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ category.name }}</li>
+        </ol>
+    </nav>
+
+    <h1>{{ category.name }}</h1>
+    
+    <!-- Subcategories -->
+    {% if subcategories %}
+        <div class="row mb-4">
+            {% for subcategory in subcategories %}
+                <div class="col-md-3 mb-2">
+                    <a href="{% url 'subcategory_detail' category.slug subcategory.slug %}" class="btn btn-outline-primary w-100">
+                        {{ subcategory.name }}
+                    </a>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+    
+    <!-- Products -->
+    {% if products %}
+        <h2>Productos en {{ category.name }}</h2>
+        <div class="row">
+            {% for product in products %}
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100">
+                        {% if product.get_image_url %}
+                            <img src="{{ product.get_image_url }}" class="card-img-top" alt="{{ product.name }}">
+                        {% else %}
+                            <div class="card-img-top bg-light text-center py-4">
+                                <i class="bi bi-image text-muted" style="font-size: 3rem;"></i>
+                            </div>
+                        {% endif %}
+                        <div class="card-body">
+                            <h5 class="card-title">{{ product.name }}</h5>
+                            <p class="card-text text-muted">{{ product.description|truncatechars:100 }}</p>
+                            <p class="card-text"><strong>${{ product.price }}</strong></p>
+                            <div class="d-flex justify-content-between">
+                                <a href="{% url 'product_detail' product.id %}" class="btn btn-primary">
+                                    <i class="bi bi-eye"></i> Ver
+                                </a>
+                                {% if product.stock > 0 %}
+                                    <a href="{% url 'add_to_cart' product.id %}" class="btn btn-success add-to-cart" 
+                                       data-product-id="{{ product.id }}" data-product-name="{{ product.name }}">
+                                        <i class="bi bi-cart-plus"></i> Añadir
+                                    </a>
+                                {% else %}
+                                    <button class="btn btn-secondary" disabled>
+                                        <i class="bi bi-x-circle"></i> Agotado
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            No hay productos disponibles en esta categoría en este momento.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+
+
+

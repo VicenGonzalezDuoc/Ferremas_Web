@@ -1,0 +1,72 @@
+{% extends 'shop/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Carrito de Compras</h1>
+    
+    {% if cart_items %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Precio</th>
+                        <th>Cantidad</th>
+                        <th>Subtotal</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in cart_items %}
+                        <tr id="cart-item-{{ item.id }}">
+                            <td>
+                                <a href="{% url 'product_detail' item.product.id %}">{{ item.product.name }}</a>
+                            </td>
+                            <td>${{ item.product.price }}</td>
+                            <td>
+                                <form method="post" action="{% url 'update_cart' item.id %}" class="d-flex align-items-center update-cart-form">
+                                    {% csrf_token %}
+                                    <input type="number" name="quantity" value="{{ item.quantity }}" min="1" max="{{ item.product.stock }}" class="form-control form-control-sm" style="width: 70px;">
+                                    <button type="submit" class="btn btn-sm btn-outline-secondary ms-2">
+                                        <i class="bi bi-arrow-repeat"></i>
+                                    </button>
+                                </form>
+                            </td>
+                            <td class="item-subtotal">${{ item.subtotal }}</td>
+                            <td>
+                                <a href="{% url 'remove_from_cart' item.id %}" class="btn btn-sm btn-danger remove-from-cart" data-item-id="{{ item.id }}">
+                                    <i class="bi bi-trash"></i> Eliminar
+                                </a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="3" class="text-end"><strong>Total:</strong></td>
+                        <td><strong>${{ cart.total }}</strong></td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        
+        <div class="d-flex justify-content-between mt-4">
+            <a href="{% url 'clear_cart' %}" class="btn btn-outline-danger">
+                <i class="bi bi-trash"></i> Vaciar Carrito
+            </a>
+            <a href="#" class="btn btn-success">
+                <i class="bi bi-credit-card"></i> Proceder al Pago
+            </a>
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            <p>Tu carrito está vacío.</p>
+            <a href="{% url 'home' %}" class="btn btn-primary mt-2">Continuar Comprando</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+

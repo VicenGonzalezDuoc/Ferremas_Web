@@ -1,0 +1,17 @@
+{% extends "shop/base.html" %}
+{% load static %}
+
+{% block title %}Página no encontrada{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-8 offset-md-2 text-center">
+            <h1 class="display-4">404 - Página no encontrada</h1>
+            <p class="lead">Lo sentimos, la página que estás buscando no existe.</p>
+            <p>Puede que hayas escrito mal la dirección o que la página se haya movido.</p>
+            <a href="{% url 'home' %}" class="btn btn-primary mt-3">Volver a la página principal</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

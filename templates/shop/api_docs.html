@@ -1,0 +1,239 @@
+{% extends 'shop/base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    pre {
+        background-color: #f5f5f5;
+        padding: 10px;
+        border-radius: 5px;
+        overflow-x: auto;
+    }
+    code {
+        font-family: monospace;
+    }
+    .endpoint {
+        margin-bottom: 10px;
+    }
+    .method {
+        font-weight: bold;
+        color: #0d6efd;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Documentación de la API de Ferremas</h1>
+    
+    <div class="alert alert-info">
+        <p>Esta página proporciona información básica sobre cómo utilizar la API de Ferremas. Para una documentación interactiva completa, visite la <a href="{% url 'schema-swagger-ui' %}" class="alert-link">documentación Swagger</a>.</p>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <h2 class="h5 mb-0">Introducción</h2>
+        </div>
+        <div class="card-body">
+            <p>La API de Ferremas permite acceder a información detallada de productos, categorías y subcategorías. Está diseñada para ser utilizada tanto por sucursales internas como por tiendas externas.</p>
+            <p>Base URL: <code>https://ferremas.cl/api/v1/</code></p>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <h2 class="h5 mb-0">Autenticación</h2>
+        </div>
+        <div class="card-body">
+            <p>La API requiere autenticación mediante token. Para obtener un token:</p>
+            <div class="endpoint">
+                <span class="method">POST</span> <code>/api/v1/token/</code>
+            </div>
+            <p>Cuerpo de la solicitud:</p>
+            <pre><code>{
+  "username": "su_usuario",
+  "password": "su_contraseña"
+}</code></pre>
+            <p>Respuesta:</p>
+            <pre><code>{
+  "token": "su_token_de_autenticación"
+}</code></pre>
+            <p>Incluya el token en el encabezado de todas las solicitudes:</p>
+            <pre><code>Authorization: Token su_token_de_autenticación</code></pre>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <h2 class="h5 mb-0">Endpoints Principales</h2>
+        </div>
+        <div class="card-body">
+            <h3 class="h6">Productos</h3>
+            <div class="endpoint">
+                <span class="method">GET</span> <code>/api/v1/productos/</code> - Listar todos los productos
+            </div>
+            <div class="endpoint">
+                <span class="method">GET</span> <code>/api/v1/productos/{id}/</code> - Obtener detalles de un producto específico
+            </div>
+            <div class="endpoint">
+                <span class="method">GET</span> <code>/api/v1/productos/low_stock/</code> - Listar productos con stock bajo
+            </div>
+            <div class="endpoint">
+                <span class="method">GET</span> <code>/api/v1/productos/out_of_stock/</code> - Listar productos sin stock
+            </div>
+            <div class="endpoint">
+                <span class="method">GET</span> <code>/api/v1/productos/by_code/?code=CODIGO</code> - Buscar producto por código
+            </div>
+            
+            <h3 class="h6 mt-3">Categorías</h3>
+            <div class="endpoint">
+                <span class="method">GET</span> <code>/api/v1/categorias/</code> - Listar todas las categorías
+            </div>
+            <div class="endpoint">
+                <span class="method">GET</span> <code>/api/v1/categorias/{id}/</code> - Obtener detalles de una categoría específica
+            </div>
+            <div class="endpoint">
+                <span class="method">GET</span> <code>/api/v1/categorias/{id}/subcategories/</code> - Listar subcategorías de una categoría
+            </div>
+            <div class="endpoint">
+                <span class="method">GET</span> <code>/api/v1/categorias/{id}/products/</code> - Listar productos de una categoría
+            </div>
+            
+            <h3 class="h6 mt-3">Subcategorías</h3>
+            <div class="endpoint">
+                <span class="method">GET</span> <code>/api/v1/subcategorias/</code> - Listar todas las subcategorías
+            </div>
+            <div class="endpoint">
+                <span class="method">GET</span> <code>/api/v1/subcategorias/{id}/</code> - Obtener detalles de una subcategoría específica
+            </div>
+            <div class="endpoint">
+                <span class="method">GET</span> <code>/api/v1/subcategorias/{id}/products/</code> - Listar productos de una subcategoría
+            </div>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <h2 class="h5 mb-0">Ejemplo de Respuesta</h2>
+        </div>
+        <div class="card-body">
+            <p>Ejemplo de respuesta para un producto:</p>
+            <pre><code>{
+  "id": "9cabf40d-44d7-494a-b59e-e1ba591785f6",
+  "code": "FER-00001",
+  "name": "Taladro Percutor Bosch",
+  "description": "Taladro percutor profesional de alta potencia",
+  "price": 89090.99,
+  "stock": 15,
+  "subcategory": {
+    "id": 1,
+    "name": "Taladros",
+    "description": "Taladros eléctricos y a batería",
+    "category": {
+      "id": 1,
+      "name": "Herramientas Eléctricas",
+      "description": "Herramientas con motor eléctrico",
+      "image": "/media/categories/herramientas_electricas.jpg"
+    }
+  },
+  "image_url": "/media/products/taladro_bosch.jpg",
+  "created_at": "2023-05-10T03:00:00Z",
+  "updated_at": "2023-05-15T14:30:00Z"
+}</code></pre>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <h2 class="h5 mb-0">Filtrado y Búsqueda</h2>
+        </div>
+        <div class="card-body">
+            <p>La API permite filtrar y buscar productos:</p>
+            <div class="endpoint">
+                <span class="method">GET</span> <code>/api/v1/productos/?search=taladro</code> - Buscar productos que contengan "taladro"
+            </div>
+            <div class="endpoint">
+                <span class="method">GET</span> <code>/api/v1/productos/?subcategory__category=1</code> - Filtrar productos por categoría
+            </div>
+            <div class="endpoint">
+                <span class="method">GET</span> <code>/api/v1/productos/?subcategory=2</code> - Filtrar productos por subcategoría
+            </div>
+            <div class="endpoint">
+                <span class="method">GET</span> <code>/api/v1/productos/?ordering=price</code> - Ordenar productos por precio (ascendente)
+            </div>
+            <div class="endpoint">
+                <span class="method">GET</span> <code>/api/v1/productos/?ordering=-price</code> - Ordenar productos por precio (descendente)
+            </div>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <h2 class="h5 mb-0">Ejemplos de Uso con Python</h2>
+        </div>
+        <div class="card-body">
+            <p>Ejemplo de cómo usar la API con Python:</p>
+            <pre><code>import requests
+
+# Obtener token de autenticación
+auth_url = "https://ferremas.cl/api/v1/token/"
+auth_data = {
+    "username": "su_usuario",
+    "password": "su_contraseña"
+}
+response = requests.post(auth_url, data=auth_data)
+token = response.json().get("token")
+
+# Establecer encabezado de autenticación
+headers = {
+    "Authorization": f"Token {token}"
+}
+
+# Obtener lista de productos
+products_url = "https://ferremas.cl/api/v1/productos/"
+response = requests.get(products_url, headers=headers)
+products = response.json()
+
+# Imprimir detalles de los productos
+for product in products:
+    print(f"ID: {product['id']}")
+    print(f"Código: {product['code']}")
+    print(f"Nombre: {product['name']}")
+    print(f"Precio: {product['price']}")
+    print(f"Stock: {product['stock']}")
+    print(f"Categoría: {product['subcategory']['category']['name']}")
+    print(f"Subcategoría: {product['subcategory']['name']}")
+    print(f"Descripción: {product['description']}")
+    print(f"URL de imagen: {product['image_url']}")
+    print("-" * 40)</code></pre>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <h2 class="h5 mb-0">Herramientas para Desarrolladores</h2>
+        </div>
+        <div class="card-body">
+            <p>Para probar la API, recomendamos utilizar:</p>
+            <ul>
+                <li><a href="{% url 'schema-swagger-ui' %}">Documentación Swagger</a> - Interfaz interactiva para probar la API</li>
+                <li><a href="https://www.postman.com/" target="_blank">Postman</a> - Herramienta para realizar solicitudes HTTP</li>
+                <li><a href="https://insomnia.rest/" target="_blank">Insomnia</a> - Alternativa a Postman</li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <h2 class="h5 mb-0">Soporte</h2>
+        </div>
+        <div class="card-body">
+            <p>Si necesita ayuda con la API, contacte a nuestro equipo de soporte:</p>
+            <ul>
+                <li>Email: <a href="mailto:api-support@ferremas.cl">api-support@ferremas.cl</a></li>
+                <li>Teléfono: +56 2 1234 5678</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,298 @@
+{% extends 'shop/base.html' %}
+{% load static %}
+
+{% block title %}Contacto - Ferremas{% endblock %}
+
+{% block extra_css %}
+<style>
+    .contact-icon {
+        font-size: 2.5rem;
+        color: #0d6efd;
+        margin-bottom: 1rem;
+    }
+    .contact-info-card {
+        transition: transform 0.3s ease;
+    }
+    .contact-info-card:hover {
+        transform: translateY(-5px);
+    }
+    .map-container {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    .form-control:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+    .btn-submit {
+        padding: 10px 30px;
+        font-weight: 500;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5 mb-5">
+    <div class="row mb-4">
+        <div class="col-12 text-center">
+            <h1 class="display-4">Contacto</h1>
+            <p class="lead text-muted">Estamos aquí para ayudarte. Contáctanos de la manera que prefieras.</p>
+            <hr class="my-4">
+        </div>
+    </div>
+
+    <!-- Tarjetas de información de contacto -->
+    <div class="row mb-5">
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 contact-info-card">
+                <div class="card-body text-center">
+                    <i class="bi bi-geo-alt-fill contact-icon"></i>
+                    <h5 class="card-title">Dirección</h5>
+                    <p class="card-text">Calle Principal #123<br>Santiago, Chile<br>Código Postal: 8320000</p>
+                    <a href="https://goo.gl/maps/yourGoogleMapsLink" class="btn btn-outline-primary mt-2" target="_blank">Ver en mapa</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 contact-info-card">
+                <div class="card-body text-center">
+                    <i class="bi bi-telephone-fill contact-icon"></i>
+                    <h5 class="card-title">Teléfono</h5>
+                    <p class="card-text">Ventas: +56 2 1234 5678<br>Soporte: +56 2 8765 4321<br>WhatsApp: +56 9 1234 5678</p>
+                    <a href="tel:+56212345678" class="btn btn-outline-primary mt-2">Llamar ahora</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 contact-info-card">
+                <div class="card-body text-center">
+                    <i class="bi bi-envelope-fill contact-icon"></i>
+                    <h5 class="card-title">Email</h5>
+                    <p class="card-text">Ventas: ventas@ferremas.cl<br>Soporte: soporte@ferremas.cl<br>Info: contacto@ferremas.cl</p>
+                    <a href="mailto:contacto@ferremas.cl" class="btn btn-outline-primary mt-2">Enviar email</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Formulario de contacto -->
+        <div class="col-lg-6 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <h3 class="card-title mb-4">Envíanos un mensaje</h3>
+                    
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                    
+                    <form method="post" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.name.id_for_label }}" class="form-label">{{ form.name.label }} <span class="text-danger">*</span></label>
+                            {{ form.name }}
+                            {% if form.name.errors %}
+                                <div class="text-danger">{{ form.name.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.email.id_for_label }}" class="form-label">{{ form.email.label }} <span class="text-danger">*</span></label>
+                            {{ form.email }}
+                            {% if form.email.errors %}
+                                <div class="text-danger">{{ form.email.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.phone.id_for_label }}" class="form-label">{{ form.phone.label }}</label>
+                            {{ form.phone }}
+                            {% if form.phone.errors %}
+                                <div class="text-danger">{{ form.phone.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.subject.id_for_label }}" class="form-label">{{ form.subject.label }} <span class="text-danger">*</span></label>
+                            {{ form.subject }}
+                            {% if form.subject.errors %}
+                                <div class="text-danger">{{ form.subject.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.message.id_for_label }}" class="form-label">{{ form.message.label }} <span class="text-danger">*</span></label>
+                            {{ form.message }}
+                            {% if form.message.errors %}
+                                <div class="text-danger">{{ form.message.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg btn-submit">
+                                <i class="bi bi-send me-2"></i> Enviar mensaje
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Información adicional y mapa -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body p-4">
+                    <h3 class="card-title mb-4">Horario de atención</h3>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <tbody>
+                                <tr>
+                                    <td><strong>Lunes a Viernes</strong></td>
+                                    <td>9:00 - 18:00</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Sábados</strong></td>
+                                    <td>10:00 - 14:00</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Domingos y Festivos</strong></td>
+                                    <td>Cerrado</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body p-4">
+                    <h3 class="card-title mb-4">Contáctanos por WhatsApp</h3>
+                    <p>Para una atención más rápida, puedes contactarnos directamente por WhatsApp:</p>
+                    <a href="https://wa.me/56912345678" class="btn btn-success btn-lg w-100" target="_blank">
+                        <i class="bi bi-whatsapp me-2"></i> Chatear con un vendedor
+                    </a>
+                </div>
+            </div>
+            
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <h3 class="card-title mb-4">Síguenos en redes sociales</h3>
+                    <div class="d-flex justify-content-around">
+                        <a href="#" class="btn btn-outline-primary btn-lg" target="_blank">
+                            <i class="bi bi-facebook"></i>
+                        </a>
+                        <a href="#" class="btn btn-outline-danger btn-lg" target="_blank">
+                            <i class="bi bi-instagram"></i>
+                        </a>
+                        <a href="#" class="btn btn-outline-info btn-lg" target="_blank">
+                            <i class="bi bi-twitter"></i>
+                        </a>
+                        <a href="#" class="btn btn-outline-danger btn-lg" target="_blank">
+                            <i class="bi bi-youtube"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Mapa de Google -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <h3 class="card-title mb-4">Nuestra ubicación</h3>
+                    <div class="map-container">
+                        <div class="ratio ratio-21x9">
+                            <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3329.0457222631986!2d-70.6664441!3d-33.4489779!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x9662c5a7e6f7c3b7%3A0x8e5fde76df3293a7!2sSantiago%2C%20Regi%C3%B3n%20Metropolitana!5e0!3m2!1ses!2scl!4v1620000000000!5m2!1ses!2scl" 
+                                    width="100%" height="450" style="border:0;" allowfullscreen="" loading="lazy"></iframe>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Preguntas frecuentes -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <h3 class="card-title mb-4">Preguntas frecuentes</h3>
+                    
+                    <div class="accordion" id="faqAccordion">
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="headingOne">
+                                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                                    ¿Cuáles son los métodos de pago aceptados?
+                                </button>
+                            </h2>
+                            <div id="collapseOne" class="accordion-collapse collapse show" aria-labelledby="headingOne" data-bs-parent="#faqAccordion">
+                                <div class="accordion-body">
+                                    Aceptamos tarjetas de crédito y débito (Visa, MasterCard, American Express), transferencias bancarias, WebPay y efectivo para compras en tienda.
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="headingTwo">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                                    ¿Cuál es el tiempo de entrega de los productos?
+                                </button>
+                            </h2>
+                            <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#faqAccordion">
+                                <div class="accordion-body">
+                                    El tiempo de entrega varía según la ubicación. Para Santiago, generalmente entregamos en 24-48 horas. Para regiones, el tiempo de entrega es de 3-5 días hábiles.
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="headingThree">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                                    ¿Tienen servicio de instalación?
+                                </button>
+                            </h2>
+                            <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#faqAccordion">
+                                <div class="accordion-body">
+                                    Sí, ofrecemos servicios de instalación para ciertos productos. El costo varía según el tipo de producto y la complejidad de la instalación. Consulta con nuestro equipo para más detalles.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Validación del formulario
+    (function () {
+        'use strict'
+        var forms = document.querySelectorAll('.needs-validation')
+        Array.prototype.slice.call(forms)
+            .forEach(function (form) {
+                form.addEventListener('submit', function (event) {
+                    if (!form.checkValidity()) {
+                        event.preventDefault()
+                        event.stopPropagation()
+                    }
+                    form.classList.add('was-validated')
+                }, false)
+            })
+    })()
+</script>
+{% endblock %}
+

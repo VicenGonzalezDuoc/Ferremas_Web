@@ -1,0 +1,73 @@
+{% extends 'shop/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'home' %}">Inicio</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Resultados de búsqueda</li>
+        </ol>
+    </nav>
+
+    <h1>{{ title }}</h1>
+    
+    <!-- Search form -->
+    <div class="mb-4">
+        <form action="{% url 'search' %}" method="get" class="d-flex">
+            <input class="form-control me-2" type="search" placeholder="Buscar productos..." name="q" value="{{ query }}">
+            <button class="btn btn-primary" type="submit">Buscar</button>
+        </form>
+    </div>
+    
+    {% if products %}
+        <div class="row">
+            {% for product in products %}
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100">
+                        {% if product.get_image_url %}
+                            <img src="{{ product.get_image_url }}" class="card-img-top" alt="{{ product.name }}">
+                        {% else %}
+                            <div class="card-img-top bg-light text-center py-4">
+                                <i class="bi bi-image text-muted" style="font-size: 3rem;"></i>
+                            </div>
+                        {% endif %}
+                        <div class="card-body">
+                            <h5 class="card-title">{{ product.name }}</h5>
+                            <p class="card-text text-muted">{{ product.description|truncatechars:100 }}</p>
+                            <p class="card-text"><strong>${{ product.price }}</strong></p>
+                            <div class="d-flex justify-content-between">
+                                <a href="{% url 'product_detail' product.id %}" class="btn btn-primary">
+                                    <i class="bi bi-eye"></i> Ver
+                                </a>
+                                {% if product.stock > 0 %}
+                                    <a href="{% url 'add_to_cart' product.id %}" class="btn btn-success add-to-cart" 
+                                       data-product-id="{{ product.id }}" data-product-name="{{ product.name }}">
+                                        <i class="bi bi-cart-plus"></i> Añadir
+                                    </a>
+                                {% else %}
+                                    <button class="btn btn-secondary" disabled>
+                                        <i class="bi bi-x-circle"></i> Agotado
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            No se encontraron productos que coincidan con "{{ query }}".
+        </div>
+    {% endif %}
+    
+    <!-- Volver al inicio -->
+    <div class="mt-4">
+        <a href="{% url 'home' %}" class="btn btn-outline-primary">
+            <i class="bi bi-arrow-left"></i> Volver al inicio
+        </a>
+    </div>
+</div>
+{% endblock %}
+

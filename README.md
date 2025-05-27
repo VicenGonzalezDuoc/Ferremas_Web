@@ -20,7 +20,7 @@ git clone https://github.com/ReDiego0/Ferremas_Web.git
 2. Crear entorno virtual y activarlo
 ```bash
 python -m venv venv
-./venv/Scripts/activate
+./venv/Scripts/activate  # En Windows: venv\Scripts\activate
 ```
 
 3. Instalar dependencias
@@ -28,10 +28,17 @@ python -m venv venv
 pip install -r requirements.txt
 ```
 
-4. Iniciar el servidor
+4. Verificar que todos los paquetes requeridos estén instalados
+```bash
+pip install django-crispy-forms crispy-bootstrap5 djangorestframework drf-yasg django-filter Pillow
+```
+
+5. Aplicar migraciones
+```bash
+python manage.py migrate
+```
+
+6. Iniciar el servidor
 ```bash
 python manage.py runserver
-```
-did it work?
-
 yes
