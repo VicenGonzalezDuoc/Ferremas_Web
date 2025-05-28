@@ -1,0 +1,38 @@
+{% extends "shop/base.html" %}
+{% load static %}
+
+{% block title %}Pago Completado - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container py-5 text-center">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-success">
+                <div class="card-header bg-success text-white">
+                    <h3 class="mb-0">¡Pago Completado con Éxito!</h3>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <i class="bi bi-check-circle-fill text-success" style="font-size: 5rem;"></i>
+                    </div>
+                    <h4 class="mb-3">Gracias por tu compra</h4>
+                    <p class="mb-4">Tu pedido ha sido procesado correctamente y será enviado a la brevedad.</p>
+                    <p class="mb-4">Hemos enviado un correo electrónico con los detalles de tu compra.</p>
+                    
+                    <div class="d-flex justify-content-center">
+                        <a href="{% url 'home' %}" class="btn btn-primary me-3">
+                            <i class="bi bi-house-fill"></i> Volver al Inicio
+                        </a>
+                        <a href="{% url 'orders' %}" class="btn btn-outline-primary">
+                            <i class="bi bi-bag-check-fill"></i> Ver Mis Pedidos
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
+

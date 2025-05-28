@@ -91,19 +91,23 @@ class Cart(models.Model):
         return f"Carrito {self.id}"
     
     @property
+    def items(self):
+        """Devuelve los items del carrito"""
+        return self.cartitem_set.all()
+    
+    @property
     def item_count(self):
+        """Devuelve el número total de items en el carrito"""
         return self.cartitem_set.aggregate(total=models.Sum('quantity'))['total'] or 0
     
     @property
     def total(self):
-        from django.db.models import F, Sum, DecimalField
-        from django.db.models.functions import Cast
-        
-        result = self.cartitem_set.annotate(
-            item_total=Cast(F('quantity') * F('product__price'), DecimalField())
-        ).aggregate(total=Sum('item_total'))
-        
-        return result['total'] or 0
+        """Devuelve el total del carrito"""
+        return sum(item.subtotal for item in self.items)
+    
+    def get_total_in_clp(self):
+        """Obtiene el total del carrito en pesos chilenos"""
+        return self.total
     
     def save(self, *args, **kwargs):
         # Asegurarse de que session_id sea una cadena
@@ -150,3 +154,114 @@ class PriceHistory(models.Model):
     
     def __str__(self):
         return f"{self.product.name} - ${self.price} ({self.created_at.strftime('%d/%m/%Y')})"
+
+# Definir ShippingAddress antes de Order
+class ShippingAddress(models.Model):
+    """Modelo para las direcciones de envío"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='shipping_addresses')
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100)
+    email = models.EmailField()
+    phone = models.CharField(max_length=20)
+    address = models.CharField(max_length=255)
+    city = models.CharField(max_length=100)
+    region = models.CharField(max_length=100)
+    is_default = models.BooleanField(default=False)
+    order_note = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Dirección de Envío"
+        verbose_name_plural = "Direcciones de Envío"
+    
+    def __str__(self):
+        return f"{self.first_name} {self.last_name} - {self.address}, {self.city}"
+    
+    def save(self, *args, **kwargs):
+        # Si esta dirección se marca como predeterminada, desmarcar las demás
+        if self.is_default:
+            ShippingAddress.objects.filter(user=self.user, is_default=True).update(is_default=False)
+        super().save(*args, **kwargs)
+
+# Ahora definir Order después de ShippingAddress
+class Order(models.Model):
+    """Modelo para los pedidos"""
+    STATUS_CHOICES = (
+        ('pending', 'Pendiente'),
+        ('processing', 'Procesando'),
+        ('shipped', 'Enviado'),
+        ('delivered', 'Entregado'),
+        ('completed', 'Completado'),
+        ('cancelled', 'Cancelado'),
+    )
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')
+    order_number = models.CharField(max_length=20, unique=True, blank=True, null=True)
+    shipping_address = models.ForeignKey(ShippingAddress, on_delete=models.SET_NULL, null=True, blank=True)
+    order_total = models.DecimalField(max_digits=10, decimal_places=2)
+    shipping_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    is_ordered = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    ip = models.GenericIPAddressField(blank=True, null=True)
+    
+    class Meta:
+        verbose_name = "Pedido"
+        verbose_name_plural = "Pedidos"
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"Pedido #{self.order_number}"
+    
+    @property
+    def get_total(self):
+        """Obtiene el total del pedido"""
+        return self.order_total
+
+
+class OrderItem(models.Model):
+    """Modelo para items de una orden"""
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    quantity = models.IntegerField()
+    price = models.IntegerField()  # Precio en CLP
+    
+    def __str__(self):
+        return f'{self.quantity} x {self.product.name}'
+    
+    @property
+    def get_total(self):
+        """Retorna el total del item"""
+        return self.price * self.quantity
+
+
+class Payment(models.Model):
+    """Modelo para los pagos"""
+    STATUS_CHOICES = (
+        ('INITIALIZED', 'Inicializado'),
+        ('AUTHORIZED', 'Autorizado'),
+        ('FAILED', 'Fallido'),
+        ('NULLIFIED', 'Anulado'),
+        ('REVERSED', 'Reversado'),
+        ('PARTIAL_REFUND', 'Reembolso Parcial'),
+    )
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='payments')
+    payment_id = models.CharField(max_length=100)
+    token = models.CharField(max_length=255)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='INITIALIZED')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Pago"
+        verbose_name_plural = "Pagos"
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"Pago {self.payment_id} - {self.status}"

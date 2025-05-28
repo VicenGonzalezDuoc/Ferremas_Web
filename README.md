@@ -35,6 +35,7 @@ pip install pyrebase4
 pip install django-crispy-forms crispy-bootstrap5
 pip install djangorestframework drf-yasg django-filter
 pip install Pillow
+pip install transbank-sdk  # Añadir esta línea para Webpay
 ```
 
 5. Aplicar migraciones
@@ -46,4 +47,8 @@ python manage.py migrate
 ```bash
 python manage.py runserver
 ```
+
+## Requisitos mínimos
+- Python 3.8 o superior
+- Conexión a internet (para Firebase)
 

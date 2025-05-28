@@ -1,0 +1,81 @@
+<!-- Formulario de checkout -->
+<form method="post" action="{% url 'checkout' %}">
+    {% csrf_token %}
+    
+    <!-- Campos ocultos del formulario de orden -->
+    {{ order_form.order_total }}
+    {{ order_form.shipping_cost }}
+    
+    <div class="row">
+        <div class="col-md-6">
+            <h3>Información de envío</h3>
+            <div class="form-group mb-3">
+                <label for="{{ shipping_form.first_name.id_for_label }}">Nombre</label>
+                {{ shipping_form.first_name }}
+            </div>
+            <div class="form-group mb-3">
+                <label for="{{ shipping_form.last_name.id_for_label }}">Apellido</label>
+                {{ shipping_form.last_name }}
+            </div>
+            <div class="form-group mb-3">
+                <label for="{{ shipping_form.email.id_for_label }}">Email</label>
+                {{ shipping_form.email }}
+            </div>
+            <div class="form-group mb-3">
+                <label for="{{ shipping_form.phone.id_for_label }}">Teléfono</label>
+                {{ shipping_form.phone }}
+            </div>
+        </div>
+        <div class="col-md-6">
+            <h3>Dirección de envío</h3>
+            <div class="form-group mb-3">
+                <label for="{{ shipping_form.address.id_for_label }}">Dirección</label>
+                {{ shipping_form.address }}
+            </div>
+            <div class="form-group mb-3">
+                <label for="{{ shipping_form.city.id_for_label }}">Ciudad</label>
+                {{ shipping_form.city }}
+            </div>
+            <div class="form-group mb-3">
+                <label for="{{ shipping_form.region.id_for_label }}">Región</label>
+                {{ shipping_form.region }}
+            </div>
+            <div class="form-group mb-3">
+                <label for="{{ shipping_form.order_note.id_for_label }}">Notas del pedido</label>
+                {{ shipping_form.order_note }}
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mt-4">
+        <div class="col-12">
+            <button type="submit" class="btn btn-primary">Proceder al pago</button>
+        </div>
+    </div>
+</form>
+
+<!-- En la sección de resumen del pedido -->
+<div class="col-md-4">
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Resumen del Pedido</h5>
+        </div>
+        <div class="card-body">
+            <ul class="list-group list-group-flush">
+                {% for item in cart_items %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="my-0">{{ item.product.name }}</h6>
+                        <small class="text-muted">{{ item.quantity }} x {{ item.product.price|convert_currency:request.session.currency }}</small>
+                    </div>
+                    <span class="text-muted">{{ item.subtotal|convert_currency:request.session.currency }}</span>
+                </li>
+                {% endfor %}
+                <li class="list-group-item d-flex justify-content-between">
+                    <span>Total</span>
+                    <strong>{{ total|convert_currency:request.session.currency }}</strong>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>

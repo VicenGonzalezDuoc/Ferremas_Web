@@ -1,7 +1,7 @@
 from django import forms
-from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth.models import User
-from .models import Product, Category, Subcategory
+from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
+from .models import Product, Category, Subcategory, Order, ShippingAddress
 
 class UserRegisterForm(UserCreationForm):
     email = forms.EmailField(required=True, widget=forms.EmailInput(attrs={'class': 'form-control'}))
@@ -70,9 +70,33 @@ class ContactForm(forms.Form):
     subject = forms.CharField(max_length=200, label="Asunto", widget=forms.TextInput(attrs={'class': 'form-control'}))
     message = forms.CharField(label="Mensaje", widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 5}))
 
+class CheckoutForm(forms.ModelForm):
+    """Formulario para la dirección de envío durante el checkout"""
+    class Meta:
+        model = ShippingAddress
+        fields = ['first_name', 'last_name', 'email', 'phone', 'address', 'city', 'region', 'order_note']
+        widgets = {
+            'order_note': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Instrucciones especiales para la entrega'}),
+        }
+        labels = {
+            'first_name': 'Nombre',
+            'last_name': 'Apellido',
+            'email': 'Correo electrónico',
+            'phone': 'Teléfono',
+            'address': 'Dirección',
+            'city': 'Ciudad',
+            'region': 'Región',
+            'order_note': 'Notas del pedido',
+        }
 
-
-
-
-
+class OrderForm(forms.ModelForm):
+    """Formulario para el pedido"""
+    class Meta:
+        model = Order
+        fields = ['order_total', 'shipping_cost']
+        # Estos campos no se mostrarán al usuario, son solo para el procesamiento interno
+        widgets = {
+            'order_total': forms.HiddenInput(),
+            'shipping_cost': forms.HiddenInput(),
+        }
 

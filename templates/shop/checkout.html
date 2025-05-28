@@ -1,0 +1,156 @@
+{% extends "shop/base.html" %}
+{% load static %}
+{% load currency_tags %}
+{% load form_tags %}
+
+{% block title %}Checkout - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <h1 class="mb-4">Finalizar Compra</h1>
+    
+    {% if not webpay_available %}
+    <div class="alert alert-warning mb-4">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        <strong>El servicio de pago en línea no está disponible en este momento.</strong>
+        <p class="mb-0 mt-2">
+            Por favor, sigue estos pasos para solucionar el problema:
+        </p>
+        <ol class="mt-2 mb-0">
+            <li>Instala la biblioteca de Transbank con: <code>pip install transbank-sdk</code></li>
+            <li>Si ya la has instalado, verifica que sea la versión correcta: <code>pip show transbank-sdk</code></li>
+            <li>Reinicia el servidor Django después de instalar la biblioteca</li>
+            <li>Si el problema persiste, contacta al administrador</li>
+        </ol>
+    </div>
+    {% endif %}
+    
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Información de Envío</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ shipping_form.first_name.id_for_label }}" class="form-label">{{ shipping_form.first_name.label }}</label>
+                                {{ shipping_form.first_name|add_class:"form-control" }}
+                                {% if shipping_form.first_name.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ shipping_form.first_name.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ shipping_form.last_name.id_for_label }}" class="form-label">{{ shipping_form.last_name.label }}</label>
+                                {{ shipping_form.last_name|add_class:"form-control" }}
+                                {% if shipping_form.last_name.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ shipping_form.last_name.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ shipping_form.email.id_for_label }}" class="form-label">{{ shipping_form.email.label }}</label>
+                                {{ shipping_form.email|add_class:"form-control" }}
+                                {% if shipping_form.email.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ shipping_form.email.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ shipping_form.phone.id_for_label }}" class="form-label">{{ shipping_form.phone.label }}</label>
+                                {{ shipping_form.phone|add_class:"form-control" }}
+                                {% if shipping_form.phone.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ shipping_form.phone.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="{{ shipping_form.address.id_for_label }}" class="form-label">{{ shipping_form.address.label }}</label>
+                            {{ shipping_form.address|add_class:"form-control" }}
+                            {% if shipping_form.address.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ shipping_form.address.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ shipping_form.city.id_for_label }}" class="form-label">{{ shipping_form.city.label }}</label>
+                                {{ shipping_form.city|add_class:"form-control" }}
+                                {% if shipping_form.city.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ shipping_form.city.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ shipping_form.region.id_for_label }}" class="form-label">{{ shipping_form.region.label }}</label>
+                                {{ shipping_form.region|add_class:"form-control" }}
+                                {% if shipping_form.region.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ shipping_form.region.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="{{ shipping_form.order_note.id_for_label }}" class="form-label">{{ shipping_form.order_note.label }}</label>
+                            {{ shipping_form.order_note|add_class:"form-control" }}
+                            {% if shipping_form.order_note.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ shipping_form.order_note.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary btn-lg w-100" {% if not webpay_available %}disabled{% endif %}>
+                            {% if webpay_available %}
+                                Continuar al Pago
+                            {% else %}
+                                Servicio de Pago No Disponible
+                            {% endif %}
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Resumen del Pedido</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        {% for item in cart_items %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="my-0">{{ item.product.name }}</h6>
+                                <small class="text-muted">{{ item.quantity }} x {{ item.product.price|convert_currency:request.session.currency }}</small>
+                            </div>
+                            <span class="text-muted">{{ item.subtotal|convert_currency:request.session.currency }}</span>
+                        </li>
+                        {% endfor %}
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Total</span>
+                            <strong>{{ total|convert_currency:request.session.currency }}</strong>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+

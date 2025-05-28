@@ -1,9 +1,8 @@
-{% extends 'shop/base.html' %}
-{% load static %}
+{% extends 'base.html' %}
 
 {% block content %}
-<div class="container mt-4">
-    <h1>Carrito de Compras</h1>
+<div class="container my-5">
+    <h1 class="mb-4">{{ title }}</h1>
     
     {% if cart_items %}
         <div class="table-responsive">
@@ -56,7 +55,7 @@
             <a href="{% url 'clear_cart' %}" class="btn btn-outline-danger">
                 <i class="bi bi-trash"></i> Vaciar Carrito
             </a>
-            <a href="#" class="btn btn-success">
+            <a href="{% url 'checkout' %}" class="btn btn-success">
                 <i class="bi bi-credit-card"></i> Proceder al Pago
             </a>
         </div>
@@ -68,5 +67,4 @@
     {% endif %}
 </div>
 {% endblock %}
-
 

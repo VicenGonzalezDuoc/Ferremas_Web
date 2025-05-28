@@ -41,6 +41,8 @@ INSTALLED_APPS = [
     'shop',
     'rest_framework',
     'drf_yasg',
+    'crispy_forms',
+    'crispy_bootstrap5',
 ]
 
 MIDDLEWARE = [
@@ -67,7 +69,8 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'shop.context_processors.categories',  # Asegúrate de que esta línea esté presente
+                # Añadir un context processor para las categorías si es necesario
+                'shop.context_processors.categories',
             ],
         },
     },
@@ -206,3 +209,9 @@ SWAGGER_SETTINGS = {
 REDOC_SETTINGS = {
     'LAZY_RENDERING': False,
 }
+
+# Configuración de Webpay
+WEBPAY_PRODUCTION = False  # Cambiar a True en producción
+
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
+CRISPY_TEMPLATE_PACK = "bootstrap5"

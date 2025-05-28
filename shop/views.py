@@ -239,14 +239,18 @@ def subcategory_detail(request, category_slug, subcategory_slug):
     return render(request, 'shop/subcategory_detail.html', context)
 
 def product_detail(request, product_id):
-    """View for product detail page"""
+    """Vista para la página de detalle de producto"""
     product = get_object_or_404(Product, id=product_id)
     cart = get_or_create_cart(request)
+    
+    # Obtener todas las categorías para el menú desplegable
+    all_categories = Category.objects.all()
     
     context = {
         'title': product.name,
         'product': product,
         'cart': cart,
+        'categories': all_categories,
     }
     return render(request, 'shop/product_detail.html', context)
 
@@ -312,18 +316,19 @@ def profile(request):
     return render(request, 'shop/profile.html', context)
 
 # View cart
-def cart_view(request):
-    """View for shopping cart"""
+def cart(request):
+    """Vista para el carrito de compras"""
     cart = get_or_create_cart(request)
+    
+    # Obtener los items del carrito
+    cart_items = cart.items
     
     context = {
         'title': 'Carrito de Compras',
         'cart': cart,
-        'cart_items': cart.cartitem_set.all()
+        'cart_items': cart_items,
     }
-    response = render(request, 'shop/cart.html', context)
-    patch_vary_headers(response, ["Cookie"])
-    return response
+    return render(request, 'shop/cart.html', context)
 
 # Add to cart
 @debug_uuid_error
@@ -368,6 +373,11 @@ def add_to_cart(request, product_id):
                 messages.warning(request, f'No hay suficiente stock de {product.name}.')
         else:
             messages.success(request, f'{product.name} añadido al carrito.')
+        
+        # Imprimir información de depuración
+        print(f"Carrito ID: {cart.id}, Items: {cart.item_count}")
+        for item in cart.items:
+            print(f"  - {item.product.name}: {item.quantity} x ${item.product.price} = ${item.subtotal}")
         
         # Manejar solicitudes AJAX
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
@@ -503,11 +513,29 @@ def remove_from_cart(request, item_id):
         return redirect('cart')
 
 # Clear cart
+@debug_uuid_error
 def clear_cart(request):
-    cart = get_or_create_cart(request)
-    cart.cartitem_set.all().delete()
-    messages.success(request, "Carrito vaciado.")
-    return redirect('cart')
+    """Vacía el carrito de compras"""
+    try:
+        cart = get_or_create_cart(request)
+        cart.items.all().delete()
+        messages.success(request, "Carrito vaciado correctamente.")
+        
+        # Manejar solicitudes AJAX
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': True,
+                'cart_count': 0,
+                'cart_total': 0,
+                'message': "Carrito vaciado correctamente."
+            })
+        
+        return redirect('cart')
+    except Exception as e:
+        logger.error(f"Error al vaciar carrito: {str(e)}")
+        logger.error(traceback.format_exc())
+        messages.error(request, f"Error al vaciar carrito: {str(e)}")
+        return redirect('cart')
 
 # Admin product management views
 @login_required
@@ -975,6 +1003,7 @@ def search_products(request):
         'query': query,
         'products': products,
         'cart': cart,
+        'categories': Category.objects.all(),  # Añadir categorías para el navbar
     }
     
     return render(request, 'shop/search_results.html', context)
@@ -1006,3 +1035,414 @@ def set_currency(request):
     
     # Redirigir a la página anterior
     return redirect(next_url)
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.urls import reverse
+from django.conf import settings
+from django.utils import timezone
+from django.http import HttpResponseRedirect, Http404, JsonResponse
+from django.db.models import Q
+from decimal import Decimal
+import datetime
+import uuid
+import logging
+import traceback
+import sys
+import inspect
+
+from .models import Cart, CartItem, Order, OrderItem, Payment, Product, Category, ShippingAddress
+from .forms import CheckoutForm, OrderForm
+from .webpay_config import WEBPAY_AVAILABLE, Transaction, get_transaction_options
+
+logger = logging.getLogger(__name__)
+
+# Función para obtener la IP del cliente
+def get_client_ip(request):
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    return ip
+
+# Función para obtener o crear un carrito
+def get_or_create_cart(request):
+    """Obtiene o crea un carrito para el usuario o sesión actual"""
+    if request.user.is_authenticated:
+        # Buscar un carrito existente para el usuario
+        cart = Cart.objects.filter(user=request.user).first()
+        if not cart:
+            # Crear un nuevo carrito para el usuario
+            cart = Cart.objects.create(user=request.user)
+    else:
+        # Obtener el ID de sesión
+        session_id = request.session.session_key
+        if not session_id:
+            # Crear una nueva sesión si no existe
+            request.session.create()
+            session_id = request.session.session_key
+        
+        # Buscar un carrito existente para la sesión
+        cart = Cart.objects.filter(session_id=session_id).first()
+        if not cart:
+            # Crear un nuevo carrito para la sesión
+            cart = Cart.objects.create(session_id=session_id)
+    
+    return cart
+
+@login_required
+def checkout(request):
+    """Vista para el proceso de checkout"""
+    cart = get_or_create_cart(request)
+    cart_items = CartItem.objects.filter(cart=cart)
+    
+    if not cart_items.exists():
+        messages.warning(request, 'Tu carrito está vacío')
+        return redirect('cart')
+    
+    # Calcular totales
+    subtotal = sum(item.subtotal for item in cart_items)
+    shipping_cost = Decimal('0.00')  # Puedes calcular esto según tu lógica de negocio
+    total = subtotal + shipping_cost
+    
+    if request.method == 'POST':
+        shipping_form = CheckoutForm(request.POST)
+        order_form = OrderForm(request.POST)
+        
+        if shipping_form.is_valid() and order_form.is_valid():
+            try:
+                # Guardar dirección de envío
+                shipping_address = shipping_form.save(commit=False)
+                shipping_address.user = request.user
+                shipping_address.save()
+                
+                # Crear orden
+                order = order_form.save(commit=False)
+                order.user = request.user
+                order.shipping_address = shipping_address
+                order.order_total = total
+                order.shipping_cost = shipping_cost
+                order.ip = get_client_ip(request)
+                order.save()
+                
+                # Generar número de orden único
+                yr = int(datetime.date.today().strftime('%Y'))
+                dt = int(datetime.date.today().strftime('%d'))
+                mt = int(datetime.date.today().strftime('%m'))
+                d = datetime.date(yr, mt, dt)
+                current_date = d.strftime("%Y%m%d")
+                order_number = current_date + str(order.id)[:8]
+                order.order_number = order_number
+                order.save()
+                
+                # Crear items de la orden
+                for item in cart_items:
+                    OrderItem.objects.create(
+                        order=order,
+                        product=item.product,
+                        quantity=item.quantity,
+                        price=item.product.price,
+                    )
+                
+                # Iniciar proceso de pago
+                return redirect('payment', order_id=order.id)
+                
+            except Exception as e:
+                messages.error(request, f'Error al procesar el checkout: {str(e)}')
+                return redirect('checkout')
+    else:
+        # Intentar pre-llenar con la dirección predeterminada del usuario
+        default_address = ShippingAddress.objects.filter(user=request.user, is_default=True).first()
+        if default_address:
+            shipping_form = CheckoutForm(instance=default_address)
+        else:
+            shipping_form = CheckoutForm()
+        
+        # Inicializar el formulario de orden con los valores calculados
+        initial_order_data = {
+            'order_total': total,
+            'shipping_cost': shipping_cost,
+        }
+        order_form = OrderForm(initial=initial_order_data)
+    
+    context = {
+        'cart_items': cart_items,
+        'subtotal': subtotal,
+        'shipping_cost': shipping_cost,
+        'total': total,
+        'shipping_form': shipping_form,
+        'order_form': order_form,
+        'webpay_available': WEBPAY_AVAILABLE,
+    }
+    
+    return render(request, 'shop/checkout.html', context)
+
+@login_required
+def payment(request, order_id):
+    """Vista para iniciar el pago con Webpay"""
+    try:
+        order = get_object_or_404(Order, id=order_id, user=request.user)
+        
+        # Verificar si Webpay está disponible
+        if not WEBPAY_AVAILABLE:
+            logger.warning("Webpay no está disponible. Usando modo simulado.")
+            
+            # Marcar la orden como completada
+            order.status = 'completed'
+            order.is_ordered = True
+            order.save()
+            
+            # Crear un registro de pago simulado
+            try:
+                import uuid
+                Payment.objects.create(
+                    order=order,
+                    payment_id=str(order.order_number),
+                    token="simulado_" + uuid.uuid4().hex,
+                    amount=int(order.order_total),
+                    status='AUTHORIZED'
+                )
+            except Exception as e:
+                logger.error(f"Error al crear registro de pago simulado: {str(e)}")
+            
+            # Limpiar el carrito
+            cart = get_or_create_cart(request)
+            cart.items.all().delete()
+            
+            # Mostrar mensaje de éxito
+            messages.success(request, "¡Pago simulado completado con éxito!")
+            
+            # Redirigir a la página de pago completado
+            return redirect('payment_complete')
+        
+        # URL de retorno (solo usamos una URL de retorno)
+        return_url = request.build_absolute_uri(reverse('payment_confirmation'))
+        
+        # Crear una transacción
+        buy_order = str(order.order_number)
+        session_id = str(order.id)
+        amount = int(order.order_total)
+        
+        # Log para depuración
+        logger.info(f"Iniciando transacción Webpay: Orden={buy_order}, Sesión={session_id}, Monto={amount}")
+        
+        try:
+            # Crear opciones para ambiente de prueba
+            options = get_transaction_options(production=False)
+            
+            # Crear una instancia de Transaction
+            tx = Transaction(options)
+            
+            # Crear la transacción
+            response = tx.create(
+                buy_order=buy_order,
+                session_id=session_id,
+                amount=amount,
+                return_url=return_url
+            )
+            
+            # Extraer token y url
+            if isinstance(response, dict):
+                token = response.get('token')
+                url = response.get('url')
+            else:
+                # Intentar acceder como atributos (para compatibilidad)
+                token = getattr(response, 'token', None)
+                url = getattr(response, 'url', None)
+            
+            if not token or not url:
+                raise ValueError("La respuesta de Webpay no contiene token o URL")
+            
+            logger.info(f"Transacción creada: Token={token}, URL={url}")
+            
+            # Intentar crear el registro de pago si existe el modelo
+            try:
+                Payment.objects.create(
+                    order=order,
+                    payment_id=buy_order,
+                    token=token,
+                    amount=amount,
+                    status='INITIALIZED'
+                )
+            except Exception as e:
+                logger.error(f"Error al crear registro de pago: {str(e)}")
+                # Continuar aunque haya error con el registro de pago
+            
+            # Guardar el token en la sesión para verificarlo después
+            request.session['webpay_token'] = token
+            request.session['order_id'] = order.id
+            
+            # Redirigir al formulario de pago de Webpay
+            logger.info(f"Redirigiendo a: {url}")
+            return HttpResponseRedirect(url)
+        
+        except Exception as e:
+            logger.error(f"Error al crear transacción Webpay: {str(e)}")
+            logger.error(traceback.format_exc())
+            messages.error(request, f"Error al conectar con el servicio de pagos: {str(e)}")
+            return redirect('checkout')
+    
+    except Exception as e:
+        logger.error(f"Error general en vista payment: {str(e)}")
+        logger.error(traceback.format_exc())
+        messages.error(request, f"Error al procesar el pago: {str(e)}")
+        return redirect('checkout')
+
+@login_required
+def payment_confirmation(request):
+    """Vista para confirmar el pago con Webpay"""
+    try:
+        # Obtener el token de la sesión o de los parámetros de la URL
+        token = request.GET.get('token_ws', request.session.get('webpay_token'))
+        order_id = request.session.get('order_id')
+        
+        if not token:
+            messages.error(request, "No se encontró el token de la transacción.")
+            return redirect('checkout')
+        
+        logger.info(f"Confirmación de pago recibida: Token={token}, Order ID={order_id}")
+        
+        # Si Webpay no está disponible, simular una confirmación exitosa
+        if not WEBPAY_AVAILABLE:
+            logger.warning("Webpay no está disponible. Simulando confirmación de pago.")
+            
+            # Buscar la orden
+            if order_id:
+                try:
+                    order = Order.objects.get(id=order_id, user=request.user)
+                    
+                    # Marcar la orden como completada
+                    order.status = 'completed'
+                    order.is_ordered = True
+                    order.save()
+                    
+                    # Actualizar el registro de pago
+                    try:
+                        payment = Payment.objects.get(order=order, token=token)
+                        payment.status = 'AUTHORIZED'
+                        payment.save()
+                    except Payment.DoesNotExist:
+                        logger.error(f"No se encontró el registro de pago para la orden {order_id}")
+                    
+                    # Limpiar el carrito
+                    cart = get_or_create_cart(request)
+                    cart.items.all().delete()
+                    
+                    # Limpiar la sesión
+                    if 'webpay_token' in request.session:
+                        del request.session['webpay_token']
+                    if 'order_id' in request.session:
+                        del request.session['order_id']
+                    
+                    # Mostrar mensaje de éxito
+                    messages.success(request, "¡Pago simulado completado con éxito!")
+                    
+                    # Redirigir a la página de pago completado
+                    return redirect('payment_complete')
+                except Order.DoesNotExist:
+                    logger.error(f"No se encontró la orden {order_id}")
+                    messages.error(request, "No se encontró la orden asociada al pago.")
+                    return redirect('checkout')
+            else:
+                messages.error(request, "No se encontró la orden asociada al pago.")
+                return redirect('checkout')
+        
+        # Confirmar la transacción con Webpay
+        try:
+            # Crear opciones para ambiente de prueba
+            options = get_transaction_options(production=False)
+            
+            # Crear una instancia de Transaction
+            tx = Transaction(options)
+            
+            # Confirmar la transacción
+            response = tx.commit(token)
+            
+            # Extraer información de la respuesta
+            if isinstance(response, dict):
+                status = response.get('status')
+                response_code = response.get('response_code')
+                amount = response.get('amount')
+                buy_order = response.get('buy_order')
+            else:
+                # Intentar acceder como atributos (para compatibilidad)
+                status = getattr(response, 'status', None)
+                response_code = getattr(response, 'response_code', None)
+                amount = getattr(response, 'amount', None)
+                buy_order = getattr(response, 'buy_order', None)
+            
+            logger.info(f"Respuesta de confirmación: Status={status}, Código={response_code}, Monto={amount}, Orden={buy_order}")
+            
+            # Verificar si la transacción fue exitosa
+            if status == 'AUTHORIZED' and response_code == 0:
+                # Buscar la orden
+                if order_id:
+                    try:
+                        order = Order.objects.get(id=order_id, user=request.user)
+                        
+                        # Marcar la orden como completada
+                        order.status = 'completed'
+                        order.is_ordered = True
+                        order.save()
+                        
+                        # Actualizar el registro de pago
+                        try:
+                            payment = Payment.objects.get(order=order, token=token)
+                            payment.status = status
+                            payment.save()
+                        except Payment.DoesNotExist:
+                            logger.error(f"No se encontró el registro de pago para la orden {order_id}")
+                        
+                        # Limpiar el carrito
+                        cart = get_or_create_cart(request)
+                        cart.items.all().delete()
+                        
+                        # Limpiar la sesión
+                        if 'webpay_token' in request.session:
+                            del request.session['webpay_token']
+                        if 'order_id' in request.session:
+                            del request.session['order_id']
+                        
+                        # Mostrar mensaje de éxito
+                        messages.success(request, "¡Pago completado con éxito!")
+                        
+                        # Redirigir a la página de pago completado
+                        return redirect('payment_complete')
+                    except Order.DoesNotExist:
+                        logger.error(f"No se encontró la orden {order_id}")
+                        messages.error(request, "No se encontró la orden asociada al pago.")
+                        return redirect('checkout')
+                else:
+                    messages.error(request, "No se encontró la orden asociada al pago.")
+                    return redirect('checkout')
+            else:
+                # La transacción no fue exitosa
+                logger.error(f"Transacción rechazada: Status={status}, Código={response_code}")
+                messages.error(request, f"El pago fue rechazado. Por favor, intente nuevamente.")
+                return redirect('checkout')
+        
+        except Exception as e:
+            logger.error(f"Error al confirmar transacción Webpay: {str(e)}")
+            logger.error(traceback.format_exc())
+            messages.error(request, f"Error al confirmar el pago: {str(e)}")
+            return redirect('checkout')
+    
+    except Exception as e:
+        logger.error(f"Error general en vista payment_confirmation: {str(e)}")
+        logger.error(traceback.format_exc())
+        messages.error(request, f"Error al procesar la confirmación del pago: {str(e)}")
+        return redirect('checkout')
+
+@login_required
+def payment_complete(request):
+    """Vista para mostrar la página de pago completado"""
+    # Obtener el carrito para el usuario
+    cart = get_or_create_cart(request)
+    
+    context = {
+        'title': 'Pago Completado',
+        'cart': cart,
+    }
+    return render(request, 'shop/payment_complete.html', context)
