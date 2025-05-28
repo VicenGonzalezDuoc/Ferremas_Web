@@ -12,6 +12,10 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 
 import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Cargar variables de entorno desde .env
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -21,10 +25,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-d!b8z=^pc$j)tay%)@3podd5xut*ak@o53-p%^qq+l#$!_*auc'
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-d!b8z=^pc$j)tay%)@3podd5xut*ak@o53-p%^qq+l#$!_*auc')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = []
 
@@ -211,7 +215,21 @@ REDOC_SETTINGS = {
 }
 
 # Configuración de Webpay
-WEBPAY_PRODUCTION = False  # Cambiar a True en producción
+WEBPAY_COMMERCE_CODE = os.getenv('WEBPAY_COMMERCE_CODE', '597055555532')
+WEBPAY_API_KEY = os.getenv('WEBPAY_API_KEY', '579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C')
+WEBPAY_ENVIRONMENT = os.getenv('WEBPAY_ENVIRONMENT', 'TEST')
+WEBPAY_PRODUCTION = WEBPAY_ENVIRONMENT == 'PRODUCTION'
+
+# Firebase config
+FIREBASE_CONFIG = {
+    "apiKey": os.getenv('FIREBASE_API_KEY'),
+    "authDomain": os.getenv('FIREBASE_AUTH_DOMAIN'),
+    "databaseURL": os.getenv('FIREBASE_DATABASE_URL'),
+    "projectId": os.getenv('FIREBASE_PROJECT_ID'),
+    "storageBucket": os.getenv('FIREBASE_STORAGE_BUCKET'),
+    "messagingSenderId": os.getenv('FIREBASE_MESSAGING_SENDER_ID'),
+    "appId": os.getenv('FIREBASE_APP_ID'),
+}
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"

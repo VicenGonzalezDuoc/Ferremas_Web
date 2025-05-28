@@ -1,16 +1,10 @@
 from django.shortcuts import render
 from django.views.generic import TemplateView
 import pyrebase
+from django.conf import settings
 
-config={
-    "apiKey": "AIzaSyD8ccAxOcOftM2KVcH28Di7rvpYW8Mp-nM",
-    "authDomain": "ferremas-292f7.firebaseapp.com",
-    "databaseURL": "https://ferremas-292f7-default-rtdb.firebaseio.com",
-    "projectId": "ferremas-292f7",
-    "storageBucket": "ferremas-292f7.firebasestorage.app",
-    "messagingSenderId": "837938741466",
-    "appId": "1:837938741466:web:2e63e016318b97ec2525e3",
-}
+# Usar la configuración de Firebase desde settings
+config = settings.FIREBASE_CONFIG
 
 # Function-based view approach
 def home(request):

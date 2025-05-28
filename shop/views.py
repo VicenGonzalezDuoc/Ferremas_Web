@@ -1249,6 +1249,7 @@ def payment(request, order_id):
         
         # URL de retorno (solo usamos una URL de retorno)
         return_url = request.build_absolute_uri(reverse('payment_confirmation'))
+        print(f"URL de retorno: {return_url}", file=sys.stderr)
         
         # Crear una transacción
         # Asegurarse de que buy_order no exceda los 26 caracteres
@@ -1282,6 +1283,9 @@ def payment(request, order_id):
                 amount=amount,
                 return_url=return_url
             )
+            
+            # Imprimir la respuesta completa para depuración
+            print(f"Respuesta completa de Webpay: {response}", file=sys.stderr)
             
             # Extraer token y url
             if isinstance(response, dict):
@@ -1317,7 +1321,37 @@ def payment(request, order_id):
             
             # Redirigir al formulario de pago de Webpay
             print(f"Redirigiendo a: {url}", file=sys.stderr)
-            return HttpResponseRedirect(url)
+            
+            # Crear un formulario HTML para redirigir a Webpay
+            # Esto puede ayudar en casos donde la redirección directa no funciona
+            html = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Redirigiendo a Webpay</title>
+                <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+                <script>
+                    window.onload = function() {{
+                        document.getElementById('webpay-form').submit();
+                    }}
+                </script>
+            </head>
+            <body>
+                <h1>Redirigiendo a Webpay...</h1>
+                <p>Si no eres redirigido automáticamente, haz clic en el botón de abajo:</p>
+                <form id="webpay-form" action="{url}" method="POST">
+                    <input type="hidden" name="token_ws" value="{token}">
+                    <button type="submit">Continuar a Webpay</button>
+                </form>
+            </body>
+            </html>
+            """
+            
+            from django.http import HttpResponse
+            return HttpResponse(html)
+            
+            # Alternativa: usar HttpResponseRedirect
+            # return HttpResponseRedirect(url)
         
         except Exception as e:
             print(f"Error al crear transacción Webpay: {str(e)}", file=sys.stderr)
