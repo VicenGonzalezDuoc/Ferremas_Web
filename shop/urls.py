@@ -35,7 +35,7 @@ urlpatterns = [
     path('set-currency/', views.set_currency, name='set_currency'),
     # URLs para el proceso de pago
     path('checkout/', views.checkout, name='checkout'),
-    path('payment/<int:order_id>/', views.payment, name='payment'),
+    path('payment/<uuid:order_id>/', views.payment, name='payment'),
     path('payment/confirmation/', views.payment_confirmation, name='payment_confirmation'),
     path('payment/complete/', views.payment_complete, name='payment_complete'),
 ]

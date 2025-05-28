@@ -90,11 +90,10 @@ class CheckoutForm(forms.ModelForm):
         }
 
 class OrderForm(forms.ModelForm):
-    """Formulario para el pedido"""
+    """Formulario para crear órdenes"""
     class Meta:
         model = Order
         fields = ['order_total', 'shipping_cost']
-        # Estos campos no se mostrarán al usuario, son solo para el procesamiento interno
         widgets = {
             'order_total': forms.HiddenInput(),
             'shipping_cost': forms.HiddenInput(),

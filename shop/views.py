@@ -1095,6 +1095,8 @@ def get_or_create_cart(request):
 @login_required
 def checkout(request):
     """Vista para el proceso de checkout"""
+    import sys
+    
     cart = get_or_create_cart(request)
     cart_items = CartItem.objects.filter(cart=cart)
     
@@ -1111,7 +1113,10 @@ def checkout(request):
         shipping_form = CheckoutForm(request.POST)
         order_form = OrderForm(request.POST)
         
+        print("Procesando formulario de checkout", file=sys.stderr)
+        
         if shipping_form.is_valid() and order_form.is_valid():
+            print("Formularios válidos, procesando checkout", file=sys.stderr)
             try:
                 # Guardar dirección de envío
                 shipping_address = shipping_form.save(commit=False)
@@ -1127,13 +1132,22 @@ def checkout(request):
                 order.ip = get_client_ip(request)
                 order.save()
                 
-                # Generar número de orden único
+                # Generar número de orden único (limitado a 26 caracteres para Webpay)
                 yr = int(datetime.date.today().strftime('%Y'))
                 dt = int(datetime.date.today().strftime('%d'))
                 mt = int(datetime.date.today().strftime('%m'))
                 d = datetime.date(yr, mt, dt)
                 current_date = d.strftime("%Y%m%d")
-                order_number = current_date + str(order.id)[:8]
+                
+                # Limitar el número de orden a 26 caracteres
+                # Formato: YYYYMMDD + primeros 10 caracteres del ID
+                order_id_str = str(order.id)
+                max_id_length = 26 - len(current_date)  # Restar la longitud de la fecha
+                order_id_part = order_id_str[:max_id_length]
+                
+                order_number = current_date + order_id_part
+                print(f"Número de orden generado: {order_number} (longitud: {len(order_number)})", file=sys.stderr)
+                
                 order.order_number = order_number
                 order.save()
                 
@@ -1147,11 +1161,22 @@ def checkout(request):
                     )
                 
                 # Iniciar proceso de pago
-                return redirect('payment', order_id=order.id)
+                redirect_url = reverse('payment', kwargs={'order_id': order.id})
+                print(f"Redirigiendo a: {redirect_url}", file=sys.stderr)
+                
+                # Usar HttpResponseRedirect directamente para asegurar la redirección
+                return HttpResponseRedirect(redirect_url)
                 
             except Exception as e:
+                print(f"Error al procesar el checkout: {str(e)}", file=sys.stderr)
+                import traceback
+                print(traceback.format_exc(), file=sys.stderr)
                 messages.error(request, f'Error al procesar el checkout: {str(e)}')
                 return redirect('checkout')
+        else:
+            print("Formularios inválidos", file=sys.stderr)
+            print(f"Errores en shipping_form: {shipping_form.errors}", file=sys.stderr)
+            print(f"Errores en order_form: {order_form.errors}", file=sys.stderr)
     else:
         # Intentar pre-llenar con la dirección predeterminada del usuario
         default_address = ShippingAddress.objects.filter(user=request.user, is_default=True).first()
@@ -1182,12 +1207,16 @@ def checkout(request):
 @login_required
 def payment(request, order_id):
     """Vista para iniciar el pago con Webpay"""
+    import sys
+    print(f"Vista payment llamada con order_id: {order_id}", file=sys.stderr)
+    
     try:
         order = get_object_or_404(Order, id=order_id, user=request.user)
+        print(f"Orden encontrada: {order}", file=sys.stderr)
         
         # Verificar si Webpay está disponible
         if not WEBPAY_AVAILABLE:
-            logger.warning("Webpay no está disponible. Usando modo simulado.")
+            print("Webpay no está disponible. Usando modo simulado.", file=sys.stderr)
             
             # Marcar la orden como completada
             order.status = 'completed'
@@ -1205,11 +1234,12 @@ def payment(request, order_id):
                     status='AUTHORIZED'
                 )
             except Exception as e:
-                logger.error(f"Error al crear registro de pago simulado: {str(e)}")
+                print(f"Error al crear registro de pago simulado: {str(e)}", file=sys.stderr)
             
             # Limpiar el carrito
             cart = get_or_create_cart(request)
-            cart.items.all().delete()
+            cart_items = CartItem.objects.filter(cart=cart)
+            cart_items.delete()
             
             # Mostrar mensaje de éxito
             messages.success(request, "¡Pago simulado completado con éxito!")
@@ -1221,12 +1251,22 @@ def payment(request, order_id):
         return_url = request.build_absolute_uri(reverse('payment_confirmation'))
         
         # Crear una transacción
+        # Asegurarse de que buy_order no exceda los 26 caracteres
         buy_order = str(order.order_number)
+        if len(buy_order) > 26:
+            print(f"ADVERTENCIA: buy_order es demasiado largo ({len(buy_order)} caracteres). Truncando a 26 caracteres.", file=sys.stderr)
+            buy_order = buy_order[:26]
+        
+        # Convertir UUID a string para session_id
         session_id = str(order.id)
+        # Limitar session_id a 26 caracteres si es necesario
+        if len(session_id) > 26:
+            session_id = session_id[:26]
+            
         amount = int(order.order_total)
         
         # Log para depuración
-        logger.info(f"Iniciando transacción Webpay: Orden={buy_order}, Sesión={session_id}, Monto={amount}")
+        print(f"Iniciando transacción Webpay: Orden={buy_order} (longitud: {len(buy_order)}), Sesión={session_id}, Monto={amount}", file=sys.stderr)
         
         try:
             # Crear opciones para ambiente de prueba
@@ -1255,7 +1295,7 @@ def payment(request, order_id):
             if not token or not url:
                 raise ValueError("La respuesta de Webpay no contiene token o URL")
             
-            logger.info(f"Transacción creada: Token={token}, URL={url}")
+            print(f"Transacción creada: Token={token}, URL={url}", file=sys.stderr)
             
             # Intentar crear el registro de pago si existe el modelo
             try:
@@ -1267,26 +1307,29 @@ def payment(request, order_id):
                     status='INITIALIZED'
                 )
             except Exception as e:
-                logger.error(f"Error al crear registro de pago: {str(e)}")
+                print(f"Error al crear registro de pago: {str(e)}", file=sys.stderr)
                 # Continuar aunque haya error con el registro de pago
             
             # Guardar el token en la sesión para verificarlo después
             request.session['webpay_token'] = token
-            request.session['order_id'] = order.id
+            # Convertir UUID a string antes de guardarlo en la sesión
+            request.session['order_id'] = str(order.id)
             
             # Redirigir al formulario de pago de Webpay
-            logger.info(f"Redirigiendo a: {url}")
+            print(f"Redirigiendo a: {url}", file=sys.stderr)
             return HttpResponseRedirect(url)
         
         except Exception as e:
-            logger.error(f"Error al crear transacción Webpay: {str(e)}")
-            logger.error(traceback.format_exc())
+            print(f"Error al crear transacción Webpay: {str(e)}", file=sys.stderr)
+            import traceback
+            print(traceback.format_exc(), file=sys.stderr)
             messages.error(request, f"Error al conectar con el servicio de pagos: {str(e)}")
             return redirect('checkout')
     
     except Exception as e:
-        logger.error(f"Error general en vista payment: {str(e)}")
-        logger.error(traceback.format_exc())
+        print(f"Error general en vista payment: {str(e)}", file=sys.stderr)
+        import traceback
+        print(traceback.format_exc(), file=sys.stderr)
         messages.error(request, f"Error al procesar el pago: {str(e)}")
         return redirect('checkout')
 
@@ -1296,21 +1339,28 @@ def payment_confirmation(request):
     try:
         # Obtener el token de la sesión o de los parámetros de la URL
         token = request.GET.get('token_ws', request.session.get('webpay_token'))
-        order_id = request.session.get('order_id')
+        order_id_str = request.session.get('order_id')
         
         if not token:
             messages.error(request, "No se encontró el token de la transacción.")
             return redirect('checkout')
         
-        logger.info(f"Confirmación de pago recibida: Token={token}, Order ID={order_id}")
+        logger.info(f"Confirmación de pago recibida: Token={token}, Order ID={order_id_str}")
         
         # Si Webpay no está disponible, simular una confirmación exitosa
         if not WEBPAY_AVAILABLE:
             logger.warning("Webpay no está disponible. Simulando confirmación de pago.")
             
             # Buscar la orden
-            if order_id:
+            if order_id_str:
                 try:
+                    # Convertir el string a UUID si es necesario
+                    try:
+                        import uuid
+                        order_id = uuid.UUID(order_id_str)
+                    except (ValueError, TypeError):
+                        order_id = order_id_str
+                    
                     order = Order.objects.get(id=order_id, user=request.user)
                     
                     # Marcar la orden como completada
@@ -1378,8 +1428,15 @@ def payment_confirmation(request):
             # Verificar si la transacción fue exitosa
             if status == 'AUTHORIZED' and response_code == 0:
                 # Buscar la orden
-                if order_id:
+                if order_id_str:
                     try:
+                        # Convertir el string a UUID si es necesario
+                        try:
+                            import uuid
+                            order_id = uuid.UUID(order_id_str)
+                        except (ValueError, TypeError):
+                            order_id = order_id_str
+                        
                         order = Order.objects.get(id=order_id, user=request.user)
                         
                         # Marcar la orden como completada

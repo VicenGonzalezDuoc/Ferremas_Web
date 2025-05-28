@@ -186,19 +186,17 @@ class ShippingAddress(models.Model):
 
 # Ahora definir Order después de ShippingAddress
 class Order(models.Model):
-    """Modelo para los pedidos"""
+    """Modelo para las órdenes"""
     STATUS_CHOICES = (
         ('pending', 'Pendiente'),
         ('processing', 'Procesando'),
-        ('shipped', 'Enviado'),
-        ('delivered', 'Entregado'),
-        ('completed', 'Completado'),
-        ('cancelled', 'Cancelado'),
+        ('completed', 'Completada'),
+        ('cancelled', 'Cancelada'),
     )
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')
-    order_number = models.CharField(max_length=20, unique=True, blank=True, null=True)
+    order_number = models.CharField(max_length=26, unique=True, blank=True, null=True)  # Limitado a 26 caracteres para Webpay
     shipping_address = models.ForeignKey(ShippingAddress, on_delete=models.SET_NULL, null=True, blank=True)
     order_total = models.DecimalField(max_digits=10, decimal_places=2)
     shipping_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0)
@@ -206,20 +204,15 @@ class Order(models.Model):
     is_ordered = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    ip = models.GenericIPAddressField(blank=True, null=True)
+    ip = models.CharField(max_length=20, blank=True, null=True)
     
     class Meta:
-        verbose_name = "Pedido"
-        verbose_name_plural = "Pedidos"
+        verbose_name = "Orden"
+        verbose_name_plural = "Órdenes"
         ordering = ['-created_at']
     
     def __str__(self):
-        return f"Pedido #{self.order_number}"
-    
-    @property
-    def get_total(self):
-        """Obtiene el total del pedido"""
-        return self.order_total
+        return f"Orden {self.order_number}"
 
 
 class OrderItem(models.Model):
